@@ -1,0 +1,30 @@
+[
+  {
+    "question": "What was our total revenue by region last month?",
+    "sql": "SELECT region, ROUND(SUM(revenue), 2) as total_revenue FROM sales WHERE STRFTIME('%Y-%m', date) = '2025-06-01' GROUP BY region ORDER BY total_revenue DESC"
+  },
+  {
+    "question": "Show me the trend in Widgets-A sales over the last 6 months.",
+    "sql": "SELECT STRFTIME('%Y-%m', date) as month, ROUND(SUM(revenue), 2) as monthly_revenue FROM sales WHERE product_category = 'Widgets-A' GROUP BY month ORDER BY month DESC"
+  },
+  {
+    "question": "Which regions have gross margins above 50%?",
+    "sql": "SELECT region, ROUND(AVG(gross_margin_pct), 2) as avg_margin FROM sales GROUP BY region HAVING AVG(gross_margin_pct) > 50 ORDER BY avg_margin DESC"
+  },
+  {
+    "question": "Compare North America and Europe Premium product margins.",
+    "sql": "SELECT s.region, p.category_tier, ROUND(AVG(s.gross_margin_pct), 2) as avg_margin FROM sales s JOIN product_master p ON s.product_category = p.category_code WHERE s.region IN ('North America', 'Europe') AND p.category_tier = 'Premium' GROUP BY s.region, p.category_tier ORDER BY avg_margin DESC"
+  },
+  {
+    "question": "Which products are underperforming in APAC?",
+    "sql": "SELECT s.product_category, ROUND(AVG(s.gross_margin_pct), 2) as avg_margin FROM sales s WHERE s.region = 'APAC' GROUP BY s.product_category ORDER BY avg_margin ASC LIMIT 5"
+  },
+  {
+    "question": "Show me revenue trends by region for the last 6 months.",
+    "sql": "SELECT STRFTIME('%Y-%m', date) as month, region, ROUND(SUM(revenue), 2) as monthly_revenue FROM sales GROUP BY month, region ORDER BY month DESC, monthly_revenue DESC"
+  },
+  {
+    "question": "What is the average margin by product category?",
+    "sql": "SELECT product_category, ROUND(AVG(gross_margin_pct), 2) as avg_margin FROM sales GROUP BY product_category ORDER BY avg_margin DESC"
+  }
+]
