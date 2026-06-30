@@ -1,24 +1,25 @@
 # Conversational BI Assistant: Enterprise Demo Project
 
-An end-to-end demonstration of LLM-powered Business Intelligence combining OpenAI's GPT-4, SQLite, and Plotly visualization. This project showcases how natural language questions are converted to SQL queries, executed, visualized, and summarized in seconds.
+An end-to-end demonstration of LLM-powered Business Intelligence combining **OpenAI's GPT-4**, **SQLite**, and **Plotly** visualization. This project shows how natural-language business questions are converted to SQL, executed against a database, visualized, and summarized — all in seconds.
 
-## 🎯 Quick Start (5 minutes)
+## Quick Start
 
 ### Prerequisites
 - Python 3.8+
-- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
+- An OpenAI API key ([get one here](https://platform.openai.com/api-keys))
 
 ### Installation & Setup
 
-1. **Clone and navigate to the project:**
+1. **Clone the repository:**
 ```bash
-cd conversational_bi_demo
+git clone https://github.com/technology-reboot/Conversational-BI.git
+cd Conversational-BI
 ```
 
 2. **Create a Python virtual environment:**
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate   # On Windows: venv\Scripts\activate
 ```
 
 3. **Install dependencies:**
@@ -26,23 +27,17 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. **Configure environment variables:**
+4. **Configure your OpenAI API key:**
 ```bash
-cp .env.example .env
-# Edit .env and add your OpenAI API key
-# OPENAI_API_KEY=sk-...
+# Create a .env file in the project root
+echo "OPENAI_API_KEY=sk-..." > .env
 ```
 
 5. **Generate sample data:**
 ```bash
 python data/sample_data.py
 ```
-Expected output:
-```
-✓ Database created at ./data/sales_data.db
-✓ Generated 2,700,000 sales transactions
-✓ Coverage: 2025-01-01 to 2025-06-30
-```
+This creates `data/sales_data.db`, a SQLite database with sample sales transactions, regional targets, and a product master table.
 
 6. **Start the backend server:**
 ```bash
@@ -57,105 +52,91 @@ Starting Flask server...
  * Running on http://localhost:5000
 ```
 
-7. **Open the frontend in your browser:**
+7. **Open the frontend:**
 ```
 http://localhost:5000/frontend/index.html
 ```
-Or serve the frontend with a simple HTTP server:
+Or serve it separately:
 ```bash
 cd frontend
 python -m http.server 8000
-# Then visit http://localhost:8000
+# then visit http://localhost:8000
 ```
 
-## 📊 Architecture Overview
+### One-step start
+
+The repo ships with startup scripts that handle the venv, dependency install, sample-data generation, and server launch in one go:
+
+```bash
+./run.sh        # macOS / Linux
+run.bat         # Windows
+```
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│  Browser: React/HTML UI                 │
-│  ├─ Input: Natural language question    │
-│  └─ Output: Chart + SQL + Narrative     │
-└────────────┬────────────────────────────┘
+│  Browser: HTML/CSS/JS frontend           │
+│  ├─ Input: natural-language question     │
+│  └─ Output: chart + SQL + narrative      │
+└────────────┬──────────────────────────────┘
              │ HTTP REST API
-┌────────────▼────────────────────────────┐
-│  Flask Backend (backend/app.py)         │
-│  ├─ /query - Main endpoint              │
-│  ├─ /schema - Database schema           │
-│  ├─ /sql/execute - Run raw SQL          │
-│  └─ /sample-queries - Training data     │
-└────────────┬────────────────────────────┘
+┌────────────▼──────────────────────────────┐
+│  Flask Backend (backend/app.py)            │
+│  ├─ /query            – main endpoint      │
+│  ├─ /schema           – database schema    │
+│  ├─ /sql/validate     – validate raw SQL   │
+│  ├─ /sql/execute      – run raw SQL        │
+│  ├─ /sample-queries   – example questions  │
+│  ├─ /cache/clear      – clear query cache  │
+│  ├─ /cache/stats      – cache statistics   │
+│  └─ /health           – health check       │
+└────────────┬──────────────────────────────┘
              │ OpenAI API calls
-┌────────────┬────────────────────────────┐
-│ OpenAI GPT-4 (nl_to_sql.py)             │
-│ ├─ NL→SQL generation                   │
-│ └─ Narrative generation                 │
-└────────────┬────────────────────────────┘
+┌────────────▼──────────────────────────────┐
+│ OpenAI GPT-4                               │
+│ ├─ nl_to_sql.py          – NL → SQL        │
+│ └─ narrative_generator.py – NL summary     │
+└────────────┬──────────────────────────────┘
              │ SQL execution
-┌────────────▼────────────────────────────┐
-│  SQLite Database (data/sales_data.db)   │
-│  ├─ sales (2.7M rows)                   │
-│  ├─ regional_targets                    │
-│  └─ product_master                      │
-└─────────────────────────────────────────┘
+┌────────────▼──────────────────────────────┐
+│  SQLite Database (data/sales_data.db)      │
+│  ├─ sales                                  │
+│  ├─ regional_targets                       │
+│  └─ product_master                         │
+└─────────────────────────────────────────────┘
 ```
 
-## 🚀 How It Works
+## How It Works
 
-### Step 1: Natural Language → SQL
-```python
-Question: "Show me revenue by region last month"
-         ↓
-GPT-4 with schema definition
-         ↓
-SQL: "SELECT region, SUM(revenue) FROM sales 
-      WHERE STRFTIME('%Y-%m', date) = '2025-06-01'
-      GROUP BY region"
-```
+**1. Natural language → SQL**
+The question, together with a schema definition and few-shot examples, is sent to GPT-4 (temperature 0, for deterministic output) and a SQLite `SELECT` query is generated.
 
-### Step 2: Execute & Fetch Results
-```python
-SQL execution against SQLite
-         ↓
-Returns: 
-  columns: ['region', 'total_revenue']
-  rows: [('North America', 2500000), ('Europe', 1800000), ...]
-```
+**2. Execute & fetch results**
+`nl_to_sql.py` runs the generated SQL against `sales_data.db` and returns columns + rows.
 
-### Step 3: Visualize with Plotly
-```python
-Result type detection:
-  - Time series → Line chart
-  - Categories → Bar chart
-  - Single value → Metric card
-         ↓
-Interactive HTML chart (embedded in UI)
-```
+**3. Visualize**
+`chart_generator.py` inspects the result shape (scalar, single row, categorical, time series, or matrix) and produces an interactive Plotly chart accordingly — line chart for trends, bar chart for category comparisons, metric card for single values.
 
-### Step 4: Generate Executive Summary
-```python
-Results + GPT-4
-         ↓
-Narrative: "North America led with $2.5M (40% of total). 
-Europe contributed $1.8M with strong 62% margins..."
-```
+**4. Generate an executive narrative**
+`narrative_generator.py` sends the results back to GPT-4 with a prompt asking for a 2–3 sentence, executive-audience summary.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
-conversational_bi_demo/
-├── README.md                          # This file
-├── requirements.txt                   # Python dependencies
-├── .env.example                       # Environment template
+Conversational-BI/
+├── README.md
+├── requirements.txt
+├── run.sh / run.bat                  # One-step setup + launch scripts
 │
 ├── data/
-│   ├── sample_data.py                # Generate SQLite database
-│   └── sales_data.db                 # SQLite database (created by sample_data.py)
+│   └── sample_data.py                # Generates data/sales_data.db (created on first run)
 │
 ├── backend/
 │   ├── app.py                        # Flask server & API endpoints
-│   ├── nl_to_sql.py                  # OpenAI integration for NL→SQL
+│   ├── nl_to_sql.py                  # OpenAI integration: NL → SQL
 │   ├── chart_generator.py            # Plotly chart generation
-│   └── narrative_generator.py        # LLM-based summarization
+│   └── narrative_generator.py        # LLM-based result summarization
 │
 ├── frontend/
 │   ├── index.html                    # Main UI
@@ -163,73 +144,36 @@ conversational_bi_demo/
 │   └── styles.css                    # Styling
 │
 ├── prompts/
-│   ├── system_prompt_nl_to_sql.txt  # NL→SQL system prompt
-│   ├── examples_few_shot.json        # Few-shot examples
-│   └── narrative_prompt.txt          # Narrative generation template
+│   ├── system_prompt_nl_to_sql.txt   # NL → SQL system prompt
+│   └── examples_few_shot.json        # Few-shot examples for SQL generation
 │
 └── tests/
     └── test_queries.py               # Sample test queries
 ```
 
-## 🎓 Training Scenarios
+## Training Scenarios
 
-### Scenario 1: Simple Aggregation (5 min)
-**Question:** "What was our total revenue by region last month?"
+These are useful demo walkthroughs for teaching the strengths and limits of LLM-powered BI.
 
-**Expected Behavior:**
-- ✓ Generates correct SQL with GROUP BY
-- ✓ Returns bar chart showing regions
-- ✓ Narrative identifies top performer
+### 1. Simple Aggregation (5 min)
+**Question:** *"What was our total revenue by region last month?"*
+Expected: correct `GROUP BY` SQL, a bar chart by region, and a narrative identifying the top performer. Teaching point: LLMs are reliable at straightforward aggregations and date handling.
 
-**Teaching Points:**
-- LLM excels at straightforward aggregations
-- Date functions handled correctly
-- Chart type auto-selected appropriately
+### 2. Time Series Analysis (5 min)
+**Question:** *"Show me revenue trends by region for the last 6 months."*
+Expected: a multi-line chart with one line per region, time on the x-axis, and a narrative calling out growth/decline trends. Teaching point: time-series detection and multi-dimensional `GROUP BY`.
 
-### Scenario 2: Time Series Analysis (5 min)
-**Question:** "Show me revenue trends by region for the last 6 months."
+### 3. Complex Joins (7 min)
+**Question:** *"Compare North America and Europe Premium product margins."*
+Expected: a join between `sales` and `product_master`, filtered by region and tier, with a side-by-side margin comparison. Teaching point: multi-table joins and domain-specific filtering logic.
 
-**Expected Behavior:**
-- ✓ Multi-line chart with 5 region lines
-- ✓ Time on x-axis, revenue on y-axis
-- ✓ Narrative highlights growth/decline trends
+### 4. Edge Case — Causation (5 min)
+**Question:** *"Why did APAC revenue drop in March?"*
+Expected: the system shows correlated data (e.g. March vs. February) rather than inventing a cause, and honestly states it can show the data but not the reason, suggesting checks like product mix shift or seasonality. Teaching point: this is the critical boundary of LLM-powered BI — correlation, not causation.
 
-**Teaching Points:**
-- Time-series detection and visualization
-- Complex GROUP BY with multiple dimensions
-- Trend narrative generation
+## API Endpoints
 
-### Scenario 3: Complex Joins (7 min)
-**Question:** "Compare North America and Europe Premium product margins."
-
-**Expected Behavior:**
-- ✓ Joins sales and product_master tables
-- ✓ Filters by region and tier
-- ✓ Side-by-side margin comparison
-- ✓ Highlights the region with better margins
-
-**Teaching Points:**
-- Multi-table join complexity
-- Domain-specific logic (Premium tier)
-- Structured data comparison
-
-### Scenario 4: Edge Case - Causation (5 min)
-**Question:** "Why did APAC revenue drop in March?"
-
-**Expected Behavior:**
-- ✓ System does NOT hallucinate causation
-- ✓ Shows correlated data (March vs Feb comparison)
-- ✓ Honest response: "I can show you the data, but not the cause"
-- ✓ Suggests: "Check product mix shift, regional events, seasonality"
-
-**Teaching Points:**
-- **Critical boundary:** LLM-BI shows correlation, not causation
-- Importance of domain expertise
-- Honest limitations of the system
-
-## 🛠️ API Endpoints
-
-### POST `/query` - Main Query Endpoint
+### `POST /query` — main query endpoint
 **Request:**
 ```json
 {
@@ -237,7 +181,6 @@ conversational_bi_demo/
   "use_cache": true
 }
 ```
-
 **Response:**
 ```json
 {
@@ -268,77 +211,64 @@ conversational_bi_demo/
 }
 ```
 
-### GET `/schema`
-Returns database schema with all tables and columns.
+### `GET /schema`
+Returns the database schema (tables, columns, types).
 
-**Response:**
-```json
-{
-  "schema": {
-    "sales": {
-      "columns": ["transaction_id", "date", "region", "product_category", "units_sold", "revenue", "cost_of_goods_sold", "gross_margin_pct"],
-      "types": ["INTEGER", "DATE", "TEXT", "TEXT", "INTEGER", "REAL", "REAL", "REAL"]
-    },
-    ...
-  }
-}
-```
+### `POST /sql/validate`
+Validates a raw SQL string (e.g. confirms it's a read-only `SELECT`) without executing it.
 
-### POST `/sql/execute`
-Execute raw SQL (read-only).
+### `POST /sql/execute`
+Executes raw, read-only SQL directly.
 
-### GET `/health`
-Health check - verifies database connection.
+### `GET /sample-queries`
+Returns a set of example natural-language questions for quick testing.
 
-### POST `/cache/clear`
-Clear query cache.
+### `POST /cache/clear`
+Clears the query cache.
 
-## 💰 Cost Management
+### `GET /cache/stats`
+Returns cache hit/miss statistics.
 
-### Pricing Model (GPT-4)
+### `GET /health`
+Health check — verifies the database connection and reports whether the OpenAI API key is configured.
+
+## Cost Management
+
+### Pricing model (GPT-4)
 - Input: $0.03 per 1K tokens
 - Output: $0.06 per 1K tokens
 
-### Cost Examples
-| Query | Tokens | Cost |
-|-------|--------|------|
-| Simple aggregation | ~800 | $0.0015 |
-| Complex join + narrative | ~1500 | $0.0035 |
-| Average (both) | ~1150 | $0.0025 |
+### Cost examples
 
-### Cost Calculation
+| Query | Tokens | Cost |
+|---|---|---|
+| Simple aggregation | ~800 | $0.0015 |
+| Complex join + narrative | ~1,500 | $0.0035 |
+| Average (both calls) | ~1,150 | $0.0025 |
+
 ```
 Per-query cost = ((prompt_tokens * 0.03) + (completion_tokens * 0.06)) / 1000
 
 For 100 analysts × 50 queries/day:
-5,000 queries/day × $0.0025 average = $12.50/day
-≈ $3,500/month for heavy usage
+5,000 queries/day × $0.0025 average ≈ $12.50/day ≈ $3,500/month for heavy usage
 ```
 
-### Cost Optimization Strategies
-1. **Query Caching** - System caches identical questions (1-hour TTL)
-2. **Result Aggregation** - Combine multiple small queries
-3. **Prompt Optimization** - Reduce system prompt size
-4. **User Training** - Help analysts ask better questions
+### Cost optimization strategies
+1. **Query caching** — identical questions are cached (1-hour TTL by default)
+2. **Result aggregation** — combine multiple small queries
+3. **Prompt optimization** — keep the system prompt lean
+4. **User training** — help analysts phrase clearer questions
 
-## 🔐 Security & Compliance
+## Security & Compliance
 
-### Read-Only SQL
-The system blocks `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER` statements. Only `SELECT` queries are allowed.
+- **Read-only SQL** — `INSERT`, `UPDATE`, `DELETE`, `DROP`, and `ALTER` statements are blocked; only `SELECT` queries are permitted.
+- **Audit trail** — each query can be logged with the question, generated SQL, results, timestamp, and cost; extendable to a compliance system.
+- **Data governance** — no row-level data is sent to OpenAI as part of the prompt, only the schema; for PII, apply database-level masking before queries reach the system.
 
-### Audit Trail
-- Every query is logged with: question, SQL, results, timestamp, cost
-- Can be extended to integrate with compliance systems
-
-### Data Governance
-- No sensitive data in prompts sent to OpenAI
-- Schema is public; individual values are returned as query results
-- For PII: Use database-level masking before queries reach the system
-
-### Example Audit Log
+Example audit log entry:
 ```json
 {
-  "timestamp": "2025-06-18T10:30:45Z",
+  "timestamp": "2026-06-30T10:30:45Z",
   "user": "analyst@company.com",
   "question": "Show me revenue by region",
   "sql": "SELECT region, SUM(revenue) FROM sales ...",
@@ -349,113 +279,59 @@ The system blocks `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER` statements. Only
 }
 ```
 
-## 🧪 Testing
+## Testing
 
-### Run Test Queries
 ```bash
 python tests/test_queries.py
 ```
 
-### Manual Testing Checklist
-- [ ] Simple aggregation works
-- [ ] Time-series chart renders correctly
-- [ ] Narrative is factually accurate
-- [ ] Error handling shows helpful messages
-- [ ] Cache hits are detected
-- [ ] Cost tracking is accurate
-- [ ] SQL confidence scores reflect complexity
+Manual testing checklist:
+- Simple aggregation works
+- Time-series chart renders correctly
+- Narrative is factually accurate
+- Error handling shows helpful messages
+- Cache hits are detected
+- Cost tracking is accurate
+- SQL confidence scores reflect query complexity
 
-## 📈 Advanced Customization
+## Advanced Customization
 
-### Improve SQL Quality
-Edit `backend/nl_to_sql.py` to adjust:
-- System prompt (currently in `SCHEMA_DEFINITION`)
-- Few-shot examples
-- Temperature (currently 0 for deterministic SQL)
-- Max tokens for generation
+**Improve SQL quality** — edit `backend/nl_to_sql.py`: adjust the system prompt (`SCHEMA_DEFINITION`), the few-shot examples in `prompts/examples_few_shot.json`, the temperature (currently `0` for deterministic SQL), or the max token limit.
 
-### Custom Charts
-Edit `backend/chart_generator.py`:
-```python
-def create_custom_chart(df):
-    # Your Plotly chart logic
-    fig = go.Figure(...)
-    return fig
-```
+**Custom charts** — edit `backend/chart_generator.py` and add a new detection branch / chart function using Plotly's `go.Figure` API.
 
-### Multi-Language Support
-Extend `SCHEMA_DEFINITION` with translations:
-```python
-SCHEMA_DEFINITION = {
-    'en': 'You are a SQL expert...',
-    'es': 'Eres un experto en SQL...',
-    'fr': 'Vous êtes un expert SQL...'
-}
-```
+**Multi-language support** — extend the system prompt with translated variants keyed by language code.
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Issue: "OPENAI_API_KEY not configured"
-**Solution:** Check `.env` file exists and has a valid key from https://platform.openai.com/api-keys
+| Issue | Solution |
+|---|---|
+| `OPENAI_API_KEY not configured` | Create a `.env` file in the project root with `OPENAI_API_KEY=sk-...` |
+| `Database not found` | Run `python data/sample_data.py` to generate `data/sales_data.db` |
+| Backend returns 500 errors | Check the Flask server logs; confirm the OpenAI API is reachable |
+| Incorrect SQL generated | Review the schema definition in `nl_to_sql.py` and the few-shot examples; try rephrasing the question |
+| Charts not rendering | Check the browser console for JS errors and confirm the Plotly library loaded |
 
-### Issue: "Database not found"
-**Solution:** Run `python data/sample_data.py` to generate the database
-
-### Issue: Backend returns 500 errors
-**Solution:** Check Flask server logs for detailed error messages. Ensure OpenAI API is accessible.
-
-### Issue: Incorrect SQL generated
-**Solution:** 
-1. Check the schema definition in `nl_to_sql.py`
-2. Review the few-shot examples
-3. Try rephrasing the question
-4. Increase `sql_confidence` threshold in frontend if below 60%
-
-### Issue: Charts not rendering
-**Solution:** 
-1. Check browser console for JavaScript errors
-2. Ensure Plotly library is loaded (check network tab)
-3. Verify result data is valid JSON
-
-## 📚 Further Reading
-
-- **LIDA Framework:** Automated visualization generation from data
-- **Spider Dataset:** Text-to-SQL benchmark (80K+ examples)
-- **Prompt Engineering:** Best practices for LLM systems
-- **Cost Optimization:** Strategies for enterprise LLM deployments
-
-## 🎓 Learning Objectives
+## Learning Objectives
 
 After working through this demo, you should be able to:
 
-1. ✅ Articulate when LLM-BI works (aggregations, trends, comparisons)
-2. ✅ Identify failure modes (hallucination, complex logic, causation)
-3. ✅ Design effective system prompts with schema definitions
-4. ✅ Implement query caching and cost tracking
-5. ✅ Understand enterprise trade-offs (speed vs. cost vs. reliability)
-6. ✅ Build production patterns (audit trails, validation, error recovery)
+1. Articulate when LLM-powered BI works well (aggregations, trends, comparisons)
+2. Identify its failure modes (hallucination, complex business logic, causal claims)
+3. Design effective system prompts with schema definitions and few-shot examples
+4. Implement query caching and cost tracking
+5. Reason about enterprise trade-offs between speed, cost, and reliability
+6. Apply production patterns such as audit trails, SQL validation, and graceful error recovery
 
-## 🚀 Next Steps for Production
+## Next Steps for Production
 
-1. **Database:** Migrate from SQLite to Snowflake/Redshift/BigQuery
-2. **Authentication:** Add user/role-based access control
-3. **Monitoring:** Integrate with CloudWatch/DataDog for observability
-4. **Governance:** Implement query approval workflows for sensitive data
-5. **Caching:** Use Redis for distributed caching across multiple instances
-6. **Load Testing:** Test at scale (100+ concurrent analysts)
+1. **Database** — migrate from SQLite to Snowflake, Redshift, or BigQuery
+2. **Authentication** — add user/role-based access control
+3. **Monitoring** — integrate with CloudWatch or Datadog for observability
+4. **Governance** — add query-approval workflows for sensitive data
+5. **Caching** — move to Redis for distributed caching across instances
+6. **Load testing** — validate behavior at scale (100+ concurrent analysts)
 
-## 📞 Support
+## License
 
-For questions or issues:
-- Check the troubleshooting section above
-- Review error messages in backend logs
-- Inspect browser console for frontend errors
-
-## 📄 License
-
-This project is for educational and training purposes.
-
----
-
-**Happy querying! 🎉**
-"# Conversational-BI" 
+This project is intended for educational and training purposes.
