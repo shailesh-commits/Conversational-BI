@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversational BI Assistant - Enterprise Demo</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>💼 Conversational BI Assistant</h1>
+                <p class="subtitle">Natural Language → Insight in Seconds</p>
+            </div>
+            <div class="header-status">
+                <span id="status-indicator" class="status-dot"></span>
+                <span id="status-text">Initializing...</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sidebar: Sample Queries & Info -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>📋 Sample Queries</h3>
+                    <ul id="sample-queries-list" class="query-list">
+                        <li class="loading">Loading samples...</li>
+                    </ul>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>📊 Cost Tracking</h3>
+                    <div class="cost-widget">
+                        <div class="cost-item">
+                            <label>This Query:</label>
+                            <span id="query-cost">$0.00</span>
+                        </div>
+                        <div class="cost-item">
+                            <label>Session Total:</label>
+                            <span id="session-cost">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>⚙️ Tools</h3>
+                    <button id="clear-cache-btn" class="tool-btn">🗑️ Clear Cache</button>
+                    <button id="view-schema-btn" class="tool-btn">🔍 View Schema</button>
+                </div>
+            </aside>
+
+            <!-- Main Chat Area -->
+            <section class="chat-area">
+                <!-- Query Input -->
+                <div class="input-section">
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="user-input" 
+                            class="query-input" 
+                            placeholder="Ask a business question... e.g., 'Show me revenue by region last month'"
+                            autocomplete="off"
+                        >
+                        <button id="submit-btn" class="submit-btn" title="Submit Query (Enter)">
+                            <span>→</span>
+                        </button>
+                    </div>
+                    <div class="input-options">
+                        <label class="checkbox">
+                            <input type="checkbox" id="cache-checkbox" checked>
+                            <span>Use Cache</span>
+                        </label>
+                        <span id="query-info" class="query-info"></span>
+                    </div>
+                </div>
+
+                <!-- Results Container -->
+                <div id="results-container" class="results-container">
+                    <div class="welcome-message">
+                        <h2>👋 Welcome to Conversational BI</h2>
+                        <p>Ask a natural language question about your data. The system will:</p>
+                        <ul>
+                            <li>✨ Generate SQL automatically</li>
+                            <li>📊 Create an interactive visualization</li>
+                            <li>📝 Provide an executive summary</li>
+                            <li>💰 Track API costs in real-time</li>
+                        </ul>
+                        <p class="hint">Tip: Click on sample queries in the sidebar or type your own question above.</p>
+                    </div>
+                </div>
+
+                <!-- Query History (Collapsible) -->
+                <div class="history-section">
+                    <h3 class="history-title" id="history-toggle">📜 Query History (0)</h3>
+                    <div id="history-content" class="history-content" style="display: none;">
+                        <div id="history-list" class="history-list"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built with OpenAI GPT-4 | Enterprise Demo | Training Mode</p>
+        </footer>
+    </div>
+
+    <!-- Schema Modal -->
+    <div id="schema-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Database Schema</h2>
+            <div id="schema-display" class="schema-display"></div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processing your query...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
